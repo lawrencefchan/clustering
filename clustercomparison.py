@@ -27,12 +27,13 @@ for d, times in KEY_DATES.items():
                   .dropna(axis=0, how='any')
         filtered_data = data.resample('10T').mean()[start:stop]
 
-        df = kicluster.cluster_summary(filtered_data, NCLUSTERS,
-                                 method='ward', metric='euclidean')
-        # kicluster.plot_clusters(*df, envelope=True, nplots=NCLUSTERS)
+        sm = kicluster.cluster_summary(
+            filtered_data, NCLUSTERS,
+            method='ward', metric='euclidean')
+        # kicluster.plot_clusters(sm, filtered_data, envelope=True, nplots=NCLUSTERS)
 
         # Record cluster participation
-        cp[f'{d} {i.split("_")[1]}'] = df[0]['Battery position']
+        cp[f'{d} {i.split("_")[1]}'] = sm[0]['Battery position']
 
 
 # %% Contribution ratio of elements to capacity test clusters by refresh clusters

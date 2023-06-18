@@ -133,8 +133,7 @@ def clustervar(data):
 
         for j in method:
             for k in metrics:
-                df = kicluster.cluster_summary(filtered_data, nclusters, j, k)
-                sm, _ = df
+                sm = kicluster.cluster_summary(filtered_data, nclusters, j, k)
                 print(f"{i}, {j}, {k}, Std: {sm['No. Elements'].std():.2f}")
                 
                 # filtered_data.loc[:, sm['Battery position'][0]].plot(legend=False)

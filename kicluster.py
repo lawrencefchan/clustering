@@ -88,13 +88,17 @@ def make_clusters(data, cut_off, method, metric):
 
 
 def cluster_summary(data, cut_off, method='single', metric='euclidean'):
-    '''Returns a summary of clusters (elements, indices), as well as the
-    original data for easy integration with plot_clusters function.
+    '''
+    Runs clustering on a dataset and returns a summary of clusters, including:
+        - indices of elements within a cluster (Indices)
+        - names of elements within a cluster (Battery position)
+        - no. elements (No. Elements)
+
     Parameters:
     -----------
     data: a pandas series of battery position and equivalent cluster
 
-    cut_off: number of clusters to make
+    cut_off: dendrogram cutoff, i.e. number of clusters to make
     '''
     raw_clusters = make_clusters(data, cut_off, method, metric)
     clusters = [i for i in range(1, cut_off+1)]
@@ -115,7 +119,7 @@ def cluster_summary(data, cut_off, method='single', metric='euclidean'):
     summary = pd.DataFrame(d).sort_values('No. Elements', ascending=False) \
                              .reset_index(drop=True)
 
-    return summary, data  # returns original data for plotting convenience
+    return summary
 
 
 def sm_highlights(h_list, summary):
@@ -139,24 +143,27 @@ def sm_highlights(h_list, summary):
 
 
 def plot_clusters(sm, data, nplots=10, envelope=False,
-                  highlights=False, legend=True, plot_title='',
+                  highlights=False, legend=True, plot_title=None,
                   save_plot=False):
     '''Plots clusters from data using cluster summary
     Parameters:
     -----------
     sm: cluster summary
     data: data to plot
-    envelope: plots a shaded
-    min-max envelope if True
-    highlights: list of batteries to highlight
-
-    NOTE: highlights is not tested.
+    envelope: plots a shaded min-max envelope if True
+    highlights: list of batteries to highlight (TODO)
+    nplots: maximum number of plots to show
     '''
     if highlights:
-        dt_color, dt_alpha = '0.8', 0.5
+        kwargs={
+            'color': '0.8',
+            'alpha': 0.5
+        }
     else:
-        dt_color, dt_alpha = None, None
-
+        kwargs={
+            # 'color':None,
+            'alpha':None
+        }
     if save_plot:
         figsize = (10, 7)
     else:
@@ -165,8 +172,9 @@ def plot_clusters(sm, data, nplots=10, envelope=False,
     # todo: remove indices from sm (if useful)
     # check enumerate over Battery pos, automatic highlights if in sm
     for idx, i in enumerate(sm['Battery position']):
-
-        if idx < nplots:
+        if idx >= nplots:
+            break
+        else:
             fig, ax = plt.subplots(figsize=figsize)
             elements = f'{sm["No. Elements"][idx]}'
 
@@ -177,31 +185,31 @@ def plot_clusters(sm, data, nplots=10, envelope=False,
                           alpha=0.3,
                           ax=ax)
 
-            data.loc[:, i].plot(legend=False,
-                                color=dt_color,
-                                alpha=dt_alpha,
-                                ax=ax)
+            data.loc[:, i].plot(legend=False, ax=ax, **kwargs)
             # ax.set_ylim((2.05, 2.45))
 
-            if highlights:
-                hlt = data.loc[:, sm['highlight'][idx]]
-                hlts = len(sm['highlight'][idx])
-                elements = f'{hlts}/{sm["No. Elements"][idx]}'
+            # if highlights:  # TODO
+            #     hlt = data.loc[:, sm['highlight'][idx]]
+            #     hlts = len(sm['highlight'][idx])
+            #     elements = f'{hlts}/{sm["No. Elements"][idx]}'
 
-                if hlts > 0:
-                    h_ax = ax.twinx()
-                    hlt.plot(ax=h_ax, legend=legend)
+            #     if hlts > 0:
+            #         h_ax = ax.twinx()
+            #         hlt.plot(ax=h_ax, legend=legend)
 
-                    if legend:
-                        h_ax.legend(loc='lower center', ncol=5)
+            #         if legend:
+            #             h_ax.legend(loc='lower center', ncol=5)
 
-                    h_ax.get_yaxis().set_ticks([])
-                    h_ax.set_ylim(ax.get_ylim())
+            #         h_ax.get_yaxis().set_ticks([])
+            #         h_ax.set_ylim(ax.get_ylim())
 
-            cl_name = (f'Cluster {idx} ({elements}) - average method')
+            if plot_title is not None:
+                ax.set_title(plot_title)
+            else:
+                cl_name = (f'Cluster {idx} ({elements}) - average method')
+                ax.set_title(cl_name)
             ax.set_ylabel("Battery Voltage")
             ax.set_xlabel("")
-            ax.set_title(cl_name)
 
             # Show legend if there are < 7 batteries displayed
             # Need to edit this to account for behaviour with highlights
@@ -212,10 +220,8 @@ def plot_clusters(sm, data, nplots=10, envelope=False,
                 plt.savefig('charts\\' + cl_name,
                             bbox_inches='tight',
                             dpi=200)
-            print(data.index[0], data.index[-1])
+            # print(data.index[0], data.index[-1])
 
-        else:
-            break
     plt.show()
 
 
@@ -223,15 +229,14 @@ def plot_clusters(sm, data, nplots=10, envelope=False,
 data = cleandata(file='30sec data.csv')
 nclusters = 4   # dendrogram cutoff
 save_plot = False
-behaviour = 0
 # ========== ================ ==========
 
 if __name__ == "__main__":
     # plot clusters based on original grafana export
     filtered_data = sp_resample(data)
     sm = cluster_summary(filtered_data, nclusters,
-                            method='average', metric='euclidean')
-    plot_clusters(*sm, envelope=True, nplots=nclusters, save_plot=save_plot)
+                         method='average', metric='euclidean')
+    plot_clusters(sm, filtered_data, envelope=True, nplots=nclusters, save_plot=save_plot)
 
     # --- tuning levers:
     # filter width
@@ -241,10 +246,10 @@ if __name__ == "__main__":
 
     # %% --- plot all
     fig, ax = plt.subplots(figsize=(10, 7))
-    filtered_data.loc['2019-04-05 23:15:00':'2019-04-06 09:45:00'].plot(legend=False, ax=ax, alpha=0.6)
+    filtered_data.loc['2019-04-05 23:15:00':'2019-04-06 09:45:00'].plot(legend=False, ax=ax)
     ax.set_ylim(bottom=2.125796267022751)  # top=2.4355774314830554
     ax.set_ylabel('Battery Voltage')
 
-    # if save_plot:
-    #     plt.savefig('Original data', bbox_inches='tight', dpi=200)
+    if save_plot:
+        plt.savefig('./charts/Original data', bbox_inches='tight', dpi=200)
     plt.show()
